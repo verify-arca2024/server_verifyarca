@@ -20,6 +20,22 @@ Nest App
 $ npm install
 ```
 
+
+
+## Up database 
+
+```
+docker-compose up -d
+```
+
+## Configuration Enviroment Variables
+
+1. Clone __.env.template__ 
+2. Rename to  __.env__
+3. Place the respective variables
+
+
+
 ## Running the app
 
 ```bash
@@ -33,3 +49,8 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Rebuild the database
+
+```
+This is command seed
+```

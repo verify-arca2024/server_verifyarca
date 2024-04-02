@@ -3,6 +3,7 @@
 /node_modules
 /build
 
+/mongo
 # Logs
 logs
 *.log
