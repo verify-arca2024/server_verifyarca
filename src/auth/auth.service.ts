@@ -84,9 +84,20 @@ export class AuthService {
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) throw new BadRequestException('Password Incorrect');
 
+    if (!user.code) {
+      throw new BadRequestException('Code not found');
+    }
+
     if (user.code !== code) {
       throw new BadRequestException('Invalid code');
     }
+
+    if (user.codeExpires < new Date()) {
+      throw new BadRequestException('Code expired, resend code');
+    }
+    user.code = null;
+    user.codeExpires = null;
+    await user.save();
 
     return this.filterUserFields(user);
   }
@@ -130,12 +141,13 @@ export class AuthService {
 
     user.verified = true;
     user.code = null;
+    user.codeExpires = null;
 
     await user.save();
     return this.filterUserFields(user);
   }
 
-  async resendCode(userId: string) {
+  async resendCodeRegister(userId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -153,7 +165,23 @@ export class AuthService {
     //TODO: PENDIENTE ENVIAR CODIGO AL USUARIO (EVALUAR SI TIENE EMAIL / PHONE Y ENVIAR CODIGO A ESE MEDIO)
 
     await user.save();
-    return { message: 'Code sent' };
+    return { message: 'Code sent for register' };
+  }
+
+  async resendCodeLogin(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const code = this.generateVerificationCode().code;
+    const codeExpires = this.generateVerificationCode().expiresAt;
+
+    user.code = '123456';
+    user.codeExpires = codeExpires;
+
+    await user.save();
+    return { message: 'Code sent for login' };
   }
 
   private generateVerificationCode() {

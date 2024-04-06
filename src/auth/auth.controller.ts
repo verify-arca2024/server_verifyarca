@@ -31,8 +31,10 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    if ((!loginDto.email && !loginDto.phone) || !loginDto.password) {
-      throw new BadRequestException('Email/phone and password are required');
+    const { email, phone } = loginDto;
+    //TODO - REFACTORIZAR ESTE CÓDIGO
+    if ((!email && !phone) || (email && phone)) {
+      throw new BadRequestException('Provide either email or phone');
     }
     let user;
     if (loginDto.email) {
@@ -82,8 +84,13 @@ export class AuthController {
     return this.authService.verifyAccount(userId, verifyDto.code);
   }
 
-  @Post('resend-code/:userId')
-  async resendCode(@Param('userId', ParseMongoIdPipe) userId: string) {
-    return this.authService.resendCode(userId);
+  @Post('resend-code/register/:userId')
+  async resendCodeRegister(@Param('userId', ParseMongoIdPipe) userId: string) {
+    return this.authService.resendCodeRegister(userId);
+  }
+
+  @Post('resend-code/login/:userId')
+  async resendCodeLogin(@Param('userId', ParseMongoIdPipe) userId: string) {
+    return this.authService.resendCodeLogin(userId);
   }
 }
