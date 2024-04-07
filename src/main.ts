@@ -18,14 +18,20 @@ async function bootstrap() {
     }),
   );
 
+  //Cors - Cross Origin Resource Sharing - Habilitar CORS - Permitir que otros dominios puedan acceder a nuestra API 
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Accept',
+  });
+
   const configService = app.get(ConfigService);
 
-  // Check if the port is set in the environment variables
-  if (configService.get("PORT")) {
+  if (configService.get('PORT')) {
     Logger.log(`Port is set to ${configService.get('PORT')}`, 'Bootstrap');
   } else {
     Logger.log('Port is not set, using default port 3000', 'Bootstrap');
-   configService.set('PORT', "3000") 
+    configService.set('PORT', '3000');
   }
 
   await app.listen(configService.get('PORT'));
