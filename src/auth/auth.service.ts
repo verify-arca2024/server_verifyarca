@@ -10,12 +10,15 @@ import { User } from 'src/users/entities/user.model';
 import * as bcrypt from 'bcrypt';
 import { UserDetails } from 'src/utils/types';
 import { JwtService } from '@nestjs/jwt';
+import { MailService } from 'src/mail/mail.service';
+import { LoginCodeDto } from './dto/loginCode.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel('User') private readonly userModel: Model<User>,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<User> {
@@ -40,8 +43,13 @@ export class AuthService {
 
       //TODO PENDIENTE ENVIAR CODIGO AL USUARIO (EVALUAR SI TIENE EMAIL / PHONE Y ENVIAR CODIGO A ESE MEDIO)
 
-      const userObject = savedUser.toObject();
+      if (email) {
+        this.mailService.sendWelcomeEmail(email, '123456');
+      } else if (phone) {
+        //TODO: PENDIENTE ENVIAR SMS
+      }
 
+      const userObject = savedUser.toObject();
       delete userObject.password;
       delete userObject.code;
       delete userObject.codeExpires;
@@ -57,6 +65,46 @@ export class AuthService {
         throw error;
       }
     }
+  }
+
+  async loginCode(loginCodeDto: LoginCodeDto) {
+    const { email, phone, password } = loginCodeDto;
+
+    let user;
+    if (email) {
+      user = await this.userModel.findOne({ email: loginCodeDto.email });
+    } else if (phone) {
+      user = await this.userModel.findOne({ phone: loginCodeDto.phone });
+    }
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.verified) {
+      throw new BadRequestException('User not verified');
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      throw new BadRequestException('Password Incorrect');
+    }
+
+    const code = this.generateVerificationCode().code;
+    const codeExpires = this.generateVerificationCode().expiresAt;
+
+    // Enviar código al usuario
+    if (email) {
+      this.mailService.sendLoginCodeEmail(email, code);
+    } else if (phone) {
+    }
+
+    user.code = code;
+    user.codeExpires = codeExpires;
+
+    await user.save();
+
+    return { message: 'Code sent for login' };
   }
 
   async loginByEmail(email: string, password: string, code: string) {
@@ -78,20 +126,16 @@ export class AuthService {
       .select('+password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
-
     if (!user.verified) throw new BadRequestException('User not verified');
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) throw new BadRequestException('Password Incorrect');
-
     if (!user.code) {
       throw new BadRequestException('Code not found');
     }
-
     if (user.code !== code) {
       throw new BadRequestException('Invalid code');
     }
-
     if (user.codeExpires < new Date()) {
       throw new BadRequestException('Code expired, resend code');
     }
@@ -100,11 +144,6 @@ export class AuthService {
     await user.save();
 
     return this.filterUserFields(user);
-  }
-
-  private filterUserFields(user: User) {
-    const { _id, email, name, lastname, verified, createdAt, updatedAt } = user;
-    return { _id, email, name, lastname, verified, createdAt, updatedAt };
   }
 
   async validateUser(details: UserDetails) {
@@ -125,10 +164,16 @@ export class AuthService {
     return token;
   }
 
-  async verifyAccount(userId: string, code: string) {
-    const user = await this.userModel.findById(userId);
+  async verifyAccount(term: string, code: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ email: term }, { phone: term }],
+    });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (user.verified) {
+      throw new BadRequestException('User is already verified');
     }
 
     if (user.code !== code) {
@@ -147,8 +192,10 @@ export class AuthService {
     return this.filterUserFields(user);
   }
 
-  async resendCodeRegister(userId: string) {
-    const user = await this.userModel.findById(userId);
+  async resendCodeRegister(term: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ email: term }, { phone: term }],
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -162,34 +209,54 @@ export class AuthService {
     user.code = code;
     user.codeExpires = codeExpires;
 
-    //TODO: PENDIENTE ENVIAR CODIGO AL USUARIO (EVALUAR SI TIENE EMAIL / PHONE Y ENVIAR CODIGO A ESE MEDIO)
+    if (user.email) {
+      this.mailService.resendCodeRegisterEmail(user.email, code);
+    } else if (user.phone) {
+      //TODO - PENDIENTE ENVIAR SMS
+    }
 
     await user.save();
-    return { message: 'Code sent for register' };
+    return { message: 'Code resend for register' };
   }
 
-  async resendCodeLogin(userId: string) {
-    const user = await this.userModel.findById(userId);
+  async resendCodeLogin(term: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ email: term }, { phone: term }],
+    });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!user.verified) {
+      throw new BadRequestException('User not verified');
     }
 
     const code = this.generateVerificationCode().code;
     const codeExpires = this.generateVerificationCode().expiresAt;
 
-    user.code = '123456';
+    user.code = code;
     user.codeExpires = codeExpires;
 
-    await user.save();
-    return { message: 'Code sent for login' };
-  }
+    if (user.email) {
+      this.mailService.resendCodeLoginEmail(user.email, code);
+    } else if (user.phone) {
+      //TODO - PENDIENTE ENVIAR SMS
+    }
 
+    await user.save();
+    return { message: 'Code resend for login' };
+  }
   private generateVerificationCode() {
     const min = 100000;
     const max = 999999;
     const code = String(Math.floor(Math.random() * (max - min + 1)) + min);
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
+    expiresAt.setMinutes(expiresAt.getMinutes() + 30);
     return { code, expiresAt };
+  }
+
+  private filterUserFields(user: User) {
+    const { _id, email, name, lastname, verified, createdAt, updatedAt } = user;
+    return { _id, email, name, lastname, verified, createdAt, updatedAt };
   }
 }

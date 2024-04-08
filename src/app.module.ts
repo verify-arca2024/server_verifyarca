@@ -6,6 +6,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PassportModule } from '@nestjs/passport';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { PassportModule } from '@nestjs/passport';
     CommonModule,
     UsersModule,
     AuthModule,
+    MailModule,
   ],
   controllers: [],
   providers: [],

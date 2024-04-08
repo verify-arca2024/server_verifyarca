@@ -6,6 +6,7 @@ import { User, UsersSchema } from 'src/users/entities/user.model';
 import { GoogleStrategy } from './strategies/GoogleStrategy';
 import { JwtModule } from '@nestjs/jwt';
 import * as dotenv from 'dotenv';
+import { MailModule } from 'src/mail/mail.module';
 dotenv.config();
 
 @Module({
@@ -30,6 +31,7 @@ dotenv.config();
       secret: process.env.SECRET_JWT,
       signOptions: { expiresIn: '60s' },
     }),
+    MailModule,
   ],
 })
 export class AuthModule {

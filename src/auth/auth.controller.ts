@@ -7,7 +7,6 @@ import {
   Req,
   Res,
   BadRequestException,
-  NotFoundException,
   Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -17,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
 import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
 import { VerifyDto } from './dto/verify.dto';
+import { LoginCodeDto } from './dto/loginCode.dto';
 
 const configService = new ConfigService();
 
@@ -27,6 +27,17 @@ export class AuthController {
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  @Post('login-code')
+  async loginCode(@Body() loginCodeDto: LoginCodeDto) {
+    const { email, phone } = loginCodeDto;
+    if ((!email && !phone) || (email && phone)) {
+      throw new BadRequestException('Provide either email or phone');
+    }
+
+    const response = await this.authService.loginCode(loginCodeDto);
+    return response;
   }
 
   @Post('login')
@@ -76,21 +87,21 @@ export class AuthController {
     res.redirect(`${configService.get('FRONTEND_URL')}`);
   }
 
-  @Post('verify/:userId')
+  @Post('verify/:term')
   async verifyAccount(
-    @Param('userId', ParseMongoIdPipe) userId: string,
+    @Param('term') term: string,
     @Body() verifyDto: VerifyDto,
   ) {
-    return this.authService.verifyAccount(userId, verifyDto.code);
+    return this.authService.verifyAccount(term, verifyDto.code);
   }
 
-  @Post('resend-code/register/:userId')
-  async resendCodeRegister(@Param('userId', ParseMongoIdPipe) userId: string) {
-    return this.authService.resendCodeRegister(userId);
+  //TODO - EL METODO PARA REENVIAR EL CORREO NO DEBE SER POR ID. YA QUE NO TIENEN A QUE REFERENCIAR. CAMBIAR POR QUE SEA POR EMAIL / PHONE.
+  @Post('resend-code/register/:term')
+  async resendCodeRegister(@Param('term') term: string) {
+    return this.authService.resendCodeRegister(term);
   }
-
-  @Post('resend-code/login/:userId')
-  async resendCodeLogin(@Param('userId', ParseMongoIdPipe) userId: string) {
-    return this.authService.resendCodeLogin(userId);
+  @Post('resend-code/login/:term')
+  async resendCodeLogin(@Param('term') term: string) {
+    return this.authService.resendCodeLogin(term);
   }
 }

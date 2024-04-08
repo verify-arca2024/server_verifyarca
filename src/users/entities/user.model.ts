@@ -3,7 +3,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 @Schema()
 export class User extends Document {
-  @Prop({ required: false, unique: true, sparse: true }) // Añade unique: true y sparse: true
+  @Prop({ required: false, unique: true, sparse: true,  }) // Añade unique: true y sparse: true
   email: string;
 
   @Prop({ required: false, unique: true, sparse: true }) // Añade unique: true y sparse: true
