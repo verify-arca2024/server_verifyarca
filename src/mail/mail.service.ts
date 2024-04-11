@@ -23,7 +23,7 @@ export class MailService {
   async sendLoginCodeEmail(to: string, code: string) {
     console.log('Enviando correo de código de inicio de sesión a:', to);
     const subject = 'VerifyArca - Codigo de Inicio de Sesión';
-    const html = await this.renderTemplate('loginCode', { code });
+    const html = await this.renderTemplate('loginCodeUser', { code });
 
     await this.sendEmail(to, subject, html);
   }
