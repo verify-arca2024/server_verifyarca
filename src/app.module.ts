@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from './common/common.module';
-import { EnvConfiguration } from './config/app.config';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PassportModule } from '@nestjs/passport';
-import { MailerModule } from '@nestjs-modules/mailer';
 import { MailModule } from './mail/mail.module';
+import { CountriesModule } from './countries/countries.module';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -23,6 +23,8 @@ import { MailModule } from './mail/mail.module';
     UsersModule,
     AuthModule,
     MailModule,
+    CountriesModule,
+    SeedModule,
   ],
   controllers: [],
   providers: [],

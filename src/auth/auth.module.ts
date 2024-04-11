@@ -26,17 +26,14 @@ dotenv.config();
         schema: UsersSchema,
       },
     ]),
-    JwtModule.register({ //TODO - CONFIGURAR LA VARIABLE DE ENTORNO.
+    JwtModule.register({
       global: true,
       secret: process.env.SECRET_JWT,
-      signOptions: { expiresIn: '60s' },
+      signOptions: { expiresIn: '1h' },
     }),
     MailModule,
   ],
 })
 export class AuthModule {
-  constructor() {
-    console.log('Auth Module');
-    console.log(process.env.SECRET_JWT)
-  }
+  constructor() {}
 }

@@ -14,7 +14,6 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
-import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
 import { VerifyDto } from './dto/verify.dto';
 import { LoginCodeDto } from './dto/loginCode.dto';
 
@@ -92,10 +91,15 @@ export class AuthController {
     @Param('term') term: string,
     @Body() verifyDto: VerifyDto,
   ) {
-    return this.authService.verifyAccount(term, verifyDto.code);
+    const user = await this.authService.verifyAccount(term, verifyDto.code);
+    const token = await this.authService.generateToken(user);
+
+    return {
+      token,
+      user,
+    };
   }
 
-  //TODO - EL METODO PARA REENVIAR EL CORREO NO DEBE SER POR ID. YA QUE NO TIENEN A QUE REFERENCIAR. CAMBIAR POR QUE SEA POR EMAIL / PHONE.
   @Post('resend-code/register/:term')
   async resendCodeRegister(@Param('term') term: string) {
     return this.authService.resendCodeRegister(term);

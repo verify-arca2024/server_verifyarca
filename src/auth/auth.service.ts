@@ -36,15 +36,15 @@ export class AuthService {
       const newUser = new this.userModel({
         ...registerDto,
         password: hashedPassword,
-        code: '123456',
+        code,
         codeExpires,
       });
       const savedUser = await newUser.save();
 
-      //TODO PENDIENTE ENVIAR CODIGO AL USUARIO (EVALUAR SI TIENE EMAIL / PHONE Y ENVIAR CODIGO A ESE MEDIO)
+      //TODO EL CODIGO POR DEFAULT AL MOMENTO DE REGISTRARSE ES 123456
 
       if (email) {
-        this.mailService.sendWelcomeEmail(email, '123456');
+        this.mailService.sendWelcomeEmail(email, code);
       } else if (phone) {
         //TODO: PENDIENTE ENVIAR SMS
       }
@@ -90,13 +90,15 @@ export class AuthService {
       throw new BadRequestException('Password Incorrect');
     }
 
-    const code = this.generateVerificationCode().code;
-    const codeExpires = this.generateVerificationCode().expiresAt;
+    let code = this.generateVerificationCode().code;
+    let codeExpires = this.generateVerificationCode().expiresAt;
 
     // Enviar código al usuario
     if (email) {
       this.mailService.sendLoginCodeEmail(email, code);
     } else if (phone) {
+      //TODO - PENDIENTE ENVIAR SMS
+      code = '123456';
     }
 
     user.code = code;
@@ -142,17 +144,17 @@ export class AuthService {
     user.code = null;
     user.codeExpires = null;
     await user.save();
-
     return this.filterUserFields(user);
   }
 
   async validateUser(details: UserDetails) {
     const user = await this.userModel.findOne({ email: details.email });
     if (user) return user;
-
+    const randomPassword = this.generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
     const newUser = new this.userModel({
       ...details,
-      password: '123456',
+      password: hashedPassword,
       verified: true,
     });
     return await newUser.save();
@@ -171,15 +173,12 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     if (user.verified) {
       throw new BadRequestException('User is already verified');
     }
-
     if (user.code !== code) {
       throw new BadRequestException('Invalid code');
     }
-
     if (user.codeExpires < new Date()) {
       throw new BadRequestException('Code expired');
     }
@@ -226,7 +225,6 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
     if (!user.verified) {
       throw new BadRequestException('User not verified');
     }
@@ -258,5 +256,17 @@ export class AuthService {
   private filterUserFields(user: User) {
     const { _id, email, name, lastname, verified, createdAt, updatedAt } = user;
     return { _id, email, name, lastname, verified, createdAt, updatedAt };
+  }
+
+  private generateRandomPassword() {
+    const characters =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += characters.charAt(
+        Math.floor(Math.random() * characters.length),
+      );
+    }
+    return password;
   }
 }

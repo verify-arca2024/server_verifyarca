@@ -2,11 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as morgan from 'morgan';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
-
+  app.use(morgan('dev'));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,7 +19,7 @@ async function bootstrap() {
     }),
   );
 
-  //Cors - Cross Origin Resource Sharing - Habilitar CORS - Permitir que otros dominios puedan acceder a nuestra API 
+  //Cors - Cross Origin Resource Sharing - Habilitar CORS - Permitir que otros dominios puedan acceder a nuestra API
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
