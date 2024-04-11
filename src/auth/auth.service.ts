@@ -80,15 +80,16 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    if (!user.verified) {
-      throw new BadRequestException('User not verified');
-    }
-
+    
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       throw new BadRequestException('Password Incorrect');
     }
+    
+    if (!user.verified) {
+      throw new BadRequestException('User not verified');
+    }
+
 
     let code = this.generateVerificationCode().code;
     let codeExpires = this.generateVerificationCode().expiresAt;
