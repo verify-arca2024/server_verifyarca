@@ -79,11 +79,10 @@ export class AuthController {
 
     const token = await this.authService.generateToken(user);
 
-    res.cookie('token', token, { httpOnly: true });
-    res.cookie('user', user, { httpOnly: true });
-
-    // Redirigir al frontend
-    res.redirect(`${configService.get('FRONTEND_URL')}`);
+    // Redirigir al frontend con el token y la información del usuario en los query params
+    const frontendUrl = configService.get('FRONTEND_URL');
+    const queryParams = `?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(user))}`;
+    res.redirect(`${frontendUrl}${queryParams}`);
   }
 
   @Post('verify/:term')
