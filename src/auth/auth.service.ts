@@ -12,6 +12,7 @@ import { UserDetails } from 'src/utils/types';
 import { JwtService } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { LoginCodeDto } from './dto/loginCode.dto';
+import { verify } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -80,16 +81,15 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       throw new BadRequestException('Password Incorrect');
     }
-    
+
     if (!user.verified) {
       throw new BadRequestException('User not verified');
     }
-
 
     let code = this.generateVerificationCode().code;
     let codeExpires = this.generateVerificationCode().expiresAt;
@@ -245,6 +245,63 @@ export class AuthService {
     await user.save();
     return { message: 'Code resend for login' };
   }
+
+  async forgotPassword(term: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ email: term }, { phone: term }],
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const recoveryCode = this.generateVerificationCode().code;
+    const recoveryCodeExpires = this.generateVerificationCode().expiresAt;
+
+    user.recoveryCode = recoveryCode;
+    user.recoveryCodeExpires = recoveryCodeExpires;
+
+    if (user.email) {
+      this.mailService.sendRecoveryCodeEmail(user.email, recoveryCode);
+    } else if (user.phone) {
+      //TODO - PENDIENTE ENVIAR SMS
+    }
+
+    await user.save();
+    return { message: 'Code sent for forgot password' };
+  }
+
+  async verifyRecoveryCode(term: string, code: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ email: term }, { phone: term }],
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!user.recoveryCode) {
+      throw new BadRequestException('Recovery code not found');
+    }
+    if (user.recoveryCode !== code) {
+      throw new BadRequestException('Invalid code');
+    }
+    if (user.recoveryCodeExpires < new Date()) {
+      throw new BadRequestException('Code expired, resend code');
+    }
+
+    return user;
+  }
+
+  async resetPassword(term: string, code: string, password: string) {
+    const user = await this.verifyRecoveryCode(term, code);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    user.recoveryCode = null;
+    user.recoveryCodeExpires = null;
+
+    await user.save();
+    return { message: 'Password reset successfully' };
+  }
+
   private generateVerificationCode() {
     const min = 100000;
     const max = 999999;

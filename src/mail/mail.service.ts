@@ -44,6 +44,14 @@ export class MailService {
     await this.sendEmail(to, subject, html);
   }
 
+  async sendRecoveryCodeEmail(to: string, code: string) {
+    console.log('Enviando correo de código de recuperación a:', to);
+    const subject = 'VerifyArca - Código de Recuperación de Contraseña';
+    const html = await this.renderTemplate('recoveryCode', { code });
+
+    await this.sendEmail(to, subject, html);
+  }
+
   //Metodos privados para enviar el correo y renderizar la plantilla
   private async sendEmail(to: string, subject: string, html: string) {
     const fromEmail = this.transporter.options.auth.user;

@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
 import { VerifyDto } from './dto/verify.dto';
 import { LoginCodeDto } from './dto/loginCode.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 const configService = new ConfigService();
 
@@ -79,10 +80,11 @@ export class AuthController {
 
     const token = await this.authService.generateToken(user);
 
-    // Redirigir al frontend con el token y la información del usuario en los query params
-    const frontendUrl = configService.get('FRONTEND_URL');
-    const queryParams = `?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(user))}`;
-    res.redirect(`${frontendUrl}${queryParams}`);
+    res.cookie('token', token, { httpOnly: true });
+    res.cookie('user', user, { httpOnly: true });
+
+    // Redirigir al frontend
+    res.redirect(`${configService.get('FRONTEND_URL')}`);
   }
 
   @Post('verify/:term')
@@ -106,5 +108,37 @@ export class AuthController {
   @Post('resend-code/login/:term')
   async resendCodeLogin(@Param('term') term: string) {
     return this.authService.resendCodeLogin(term);
+  }
+
+  @Post('forgot-password/:term')
+  async forgotPassword(@Param('term') term: string) {
+    return this.authService.forgotPassword(term);
+  }
+
+  @Post('verify-recovery-code/:term')
+  async verifyRecoveryCode(
+    @Param('term') term: string,
+    @Body() verifyDto: VerifyDto,
+  ) {
+    const user = await this.authService.verifyRecoveryCode(
+      term,
+      verifyDto.code,
+    );
+
+    return {
+      message: 'Recovery code verified',
+    };
+  }
+
+  @Post('reset-password/:term')
+  async resetPassword(
+    @Param('term') term: string,
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ) {
+    return this.authService.resetPassword(
+      term,
+      resetPasswordDto.code,
+      resetPasswordDto.password,
+    );
   }
 }
